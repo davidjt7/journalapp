@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 void main() => runApp(const DailyGratitudeApp());
 
@@ -86,6 +87,50 @@ class GratitudeInput extends StatefulWidget {
 
 class GratitudeInputState extends State<GratitudeInput> {
   final TextEditingController _controller = TextEditingController();
+  int _addEntryClickCount = 0;
+  int _viewJournalClickCount = 0;
+
+  InterstitialAd? _interstitialAd;
+
+  @override
+  void initState() {
+    super.initState();
+    _createInterstitialAd();
+  }
+
+  @override
+  void dispose() {
+    _interstitialAd?.dispose();
+    super.dispose();
+  }
+
+  void _createInterstitialAd() {
+    InterstitialAd.load(
+      adUnitId: 'ca-app-pub-8816215996841265/1305249671',
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) => _interstitialAd = ad,
+        onAdFailedToLoad: (error) =>
+            print('Failed to load interstitial ad: $error'),
+      ),
+    );
+  }
+
+  void _showInterstitialAd() {
+    if (_interstitialAd != null) {
+      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _createInterstitialAd();
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          ad.dispose();
+          _createInterstitialAd();
+        },
+      );
+      _interstitialAd!.show();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,8 +155,15 @@ class GratitudeInputState extends State<GratitudeInput> {
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () {
-            _saveGratitude(_controller.text);
-            _controller.clear();
+            _addEntryClickCount++;
+            if (_addEntryClickCount % 4 == 0) {
+              _saveGratitude(_controller.text);
+              _controller.clear();
+              _showInterstitialAd();
+            } else {
+              _saveGratitude(_controller.text);
+              _controller.clear();
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blue,
@@ -132,12 +184,23 @@ class GratitudeInputState extends State<GratitudeInput> {
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const GratitudeLog(),
-              ),
-            );
+            _viewJournalClickCount++;
+            if (_viewJournalClickCount % 4 == 0) {
+              _showInterstitialAd();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GratitudeLog(),
+                ),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GratitudeLog(),
+                ),
+              );
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.grey[200],
