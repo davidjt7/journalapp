@@ -11,7 +11,7 @@ class DailyGratitudeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Daily Gratitude',
+      title: 'Daily Journal',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -45,7 +45,7 @@ class HomePage extends StatelessWidget {
             children: [
               const SizedBox(height: 20),
               const Text(
-                'What are you grateful for today?',
+                'What are your thoughts today?',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 24,
@@ -93,14 +93,41 @@ class GratitudeInputState extends State<GratitudeInput> {
       children: [
         TextField(
           controller: _controller,
-          decoration: const InputDecoration(
-            hintText: 'Enter your gratitude here',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: 'Enter your thoughts here',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+            filled: true,
+            fillColor: Colors.grey[200],
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-          onSubmitted: (value) {
-            _saveGratitude(value);
+          keyboardType: TextInputType.multiline,
+          maxLines: null,
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () {
+            _saveGratitude(_controller.text);
             _controller.clear();
           },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          ),
+          child: const Text(
+            'Add Entry',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
         ),
         const SizedBox(height: 20),
         ElevatedButton(
@@ -112,7 +139,21 @@ class GratitudeInputState extends State<GratitudeInput> {
               ),
             );
           },
-          child: const Text('View Gratitude Log'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey[200],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          ),
+          child: const Text(
+            'View Journal',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
         ),
       ],
     );
@@ -132,10 +173,10 @@ class GratitudeLog extends StatefulWidget {
   const GratitudeLog({Key? key}) : super(key: key);
 
   @override
-  _GratitudeLogState createState() => _GratitudeLogState();
+  GratitudeLogState createState() => GratitudeLogState();
 }
 
-class _GratitudeLogState extends State<GratitudeLog> {
+class GratitudeLogState extends State<GratitudeLog> {
   late Future<Map<String, List<String>>> _gratitudeMap;
 
   @override
@@ -148,7 +189,7 @@ class _GratitudeLogState extends State<GratitudeLog> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gratitude Log'),
+        title: const Text('Journal'),
       ),
       body: Container(
         padding: const EdgeInsets.all(10),
@@ -171,7 +212,8 @@ class _GratitudeLogState extends State<GratitudeLog> {
                 itemCount: snapshot.data!.length,
                 itemBuilder: (BuildContext context, int index) {
                   final date = snapshot.data!.keys.elementAt(index);
-                  final gratitudeList = snapshot.data![date]!;
+                  final gratitudeList =
+                      (snapshot.data![date]!).reversed.toList();
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -192,16 +234,19 @@ class _GratitudeLogState extends State<GratitudeLog> {
                         itemBuilder: (BuildContext context, int index) {
                           final gratitude = gratitudeList[index];
                           final time = gratitude.split(': ')[0];
-                          final message = gratitude.split(': ')[1];
+                          final message = gratitude.split(': ')[1].trimRight();
+
                           return ListTile(
-                            title: Text(
-                              message,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18.0,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            title: Padding(
+                                padding: const EdgeInsets.only(bottom: 10.0),
+                                child: Text(
+                                  message,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18.0,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )),
                             subtitle: Text(
                               time,
                               style: const TextStyle(
@@ -248,11 +293,14 @@ class _GratitudeLogState extends State<GratitudeLog> {
     final file = File('${directory.path}/gratitude.txt');
     if (await file.exists()) {
       final contents = await file.readAsString();
-      final gratitudeList =
-          contents.split('\n').where((element) => element.isNotEmpty).toList();
+      final gratitudeList = contents
+          .split(RegExp(r'\n(?=\w{3} \d{1,2}, \d{4})'))
+          .where((element) => element.isNotEmpty)
+          .toList();
+
       final gratitudeMap = <String, List<String>>{};
       for (final gratitude in gratitudeList) {
-        final date = gratitude.split(': ')[0].split(' ')[0];
+        final date = gratitude.split(', ')[0];
         if (gratitudeMap.containsKey(date)) {
           gratitudeMap[date]!.add(gratitude);
         } else {
@@ -270,7 +318,8 @@ class _GratitudeLogState extends State<GratitudeLog> {
     final file = File('${directory.path}/gratitude.txt');
     if (await file.exists()) {
       final contents = await file.readAsString();
-      final newContents = contents.replaceAll('$gratitude\n', '');
+      final newContents =
+          contents.replaceAll('$gratitude\n', '').replaceAll(gratitude, '');
       await file.writeAsString(newContents);
     }
   }
