@@ -3,6 +3,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 void main() => runApp(const DailyGratitudeApp());
 
@@ -154,7 +155,16 @@ class GratitudeInputState extends State<GratitudeInput> {
         ),
         const SizedBox(height: 20),
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
+            if (_controller.text.isEmpty) {
+             await Fluttertoast.showToast(
+                  msg: "Enter something!",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.CENTER,
+                  timeInSecForIosWeb: 1,
+                  fontSize: 16.0);
+              return;
+            }
             _addEntryClickCount++;
             if (_addEntryClickCount % 4 == 0) {
               _saveGratitude(_controller.text);
@@ -274,7 +284,8 @@ class GratitudeLogState extends State<GratitudeLog> {
               return ListView.builder(
                 itemCount: snapshot.data!.length,
                 itemBuilder: (BuildContext context, int index) {
-                  final date = snapshot.data!.keys.elementAt(index);
+                  final date =
+                      (snapshot.data!.keys.toList().reversed).elementAt(index);
                   final gratitudeList =
                       (snapshot.data![date]!).reversed.toList();
                   return Column(
